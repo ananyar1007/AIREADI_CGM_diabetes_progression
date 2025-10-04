@@ -43,15 +43,10 @@ def train_cgm_classifier(loader, val_loader, model, epochs=20,
             optimizer.step()
             running_loss += loss.item() * Xb.size(0)
 
-        #print(len(labels), len(predictions))
-        #print(labels[0].size())
-        #print(predictions[0].size())
+        
         acc = accuracy_score(labels, predictions)
         avg_loss = running_loss / len(loader.dataset)
-        #print(confusion_matrix(labels, predictions)) 
-        
-        #train_auc = roc_auc_score(labels, probabilities)
-
+  
         
         probabilities, labels, val_loss = do_test(model, val_loader, criterion) 
         #auc = roc_auc_score(labels, probabilities)
