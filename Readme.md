@@ -1,4 +1,4 @@
-# To reproduce the results for the paper,
+#AI READI CGM Diabetes Progression Analysis
 ## Run: CGM_model_training.ipynb to train all models that run on CGM stats. The models are
  Random Forest on the 6 hand crafted features
  Deep learning CNN model trained on one week of CGM data
