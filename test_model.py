@@ -1,5 +1,5 @@
 import torch
-
+import torch.nn.functional as F
 def do_test(model, test_loader, criterion):
     model.eval()
     correct = 0
@@ -12,7 +12,7 @@ def do_test(model, test_loader, criterion):
         for Xb, yb in test_loader:
             Xb = Xb.to(device="cuda")
             yb = yb.to(device="cuda")
-            probs = model(Xb)
+            probs = F.softmax(model(Xb),dim=1)
             preds = (torch.argmax(probs, axis=1)).float().cpu()
             probabilities.extend(probs.cpu().numpy())
             labels.extend(yb.cpu())

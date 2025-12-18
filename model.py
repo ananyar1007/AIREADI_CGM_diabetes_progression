@@ -29,6 +29,57 @@ class CNN1DBinaryClassifier(nn.Module):
     def forward(self, x):
         return self.network(x)
 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class CGM2DCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.features = nn.Sequential(
+            # Input: [B, 1, 7, 288]
+            nn.Conv2d(1, 16, kernel_size=3, padding=1),
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d((1, 2)),   # shrink width only → [B, 16, 7, 144]
+
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d((1, 2)),   # [B, 32, 7, 72]
+
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d((1, 2)),   # [B, 64, 7, 36]
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            nn.MaxPool2d((1, 2)),   # [B, 128, 7, 18]
+        )
+
+        # Compute flattened size: 128 * 7 * 18 = 16128
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(128 * 7 * 18, 512),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            nn.Linear(512, 2)
+        )
+
+    def forward(self, x):
+        """
+        x: Tensor [B, 7, 288]
+        """
+        # reshape back into 7 days × 288 time steps
+        x = x.reshape(x.size(0), 7, 288)     # → [B, 7, 288]
+        x = x.unsqueeze(1)  # → [B, 1, 7, 288]
+        x = self.features(x)
+        x = self.classifier(x)
+        return x
+        
 from transformers import AutoModel
 import torch.nn as nn
 
@@ -56,7 +107,9 @@ class TransformerFusion(nn.Module):
             encoder_layer,
             num_layers=8
         )
-
+        self.pos_embed = nn.Parameter(
+            torch.zeros(1, 7 + 1, self.embed_dim) 
+            )
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.embed_dim))
         
         self.linear = nn.Linear(self.outputofmodeldim,self.embed_dim)
@@ -80,6 +133,7 @@ class TransformerFusion(nn.Module):
     
         cls_tokens = self.cls_token.expand(B, -1, -1)
         concat_data = torch.cat((cls_tokens, chunk_embeddings), dim=1)
+        concat_data = concat_data + self.pos_embed
 
         x = self.transformer_encoder(concat_data)
         cls_after_transformer = x[:,0,:]
